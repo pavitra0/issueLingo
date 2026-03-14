@@ -24,6 +24,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import remarkBreaks from 'remark-breaks';
 import IssueCommentCard from '@/components/IssueCommentCard';
 import LanguageSelector from '@/components/LanguageSelector';
 import { getLanguageByCode } from '@/lib/languages';
@@ -70,21 +72,22 @@ export default function IssuePage() {
     const params = useParams();
     const slug = params?.slug as string[]; // [owner, repo, number]
 
-    const [targetLanguage, setTargetLanguage] = useState('es');
+    const [targetLanguage, setTargetLanguage] = useState('en');
 
     // Helper to get display name from language code (for API calls that need the name)
     const getLanguageName = (code: string) => {
         const lang = getLanguageByCode(code);
-        return lang ? lang.name : 'Spanish';
+        return lang ? lang.name : 'English';
     };
 
     // Loading states
     const [isFetchingIssue, setIsFetchingIssue] = useState(true);
     const [isTranslatingThread, setIsTranslatingThread] = useState(false);
 
-    // Data states
+    const [isLoading, setIsLoading] = useState(true);
     const [issueData, setIssueData] = useState<IssueData | null>(null);
     const [translatedIssueData, setTranslatedIssueData] = useState<IssueData | null>(null);
+    const [error, setError] = useState<string | null>(null);
 
     // Reply states
     const [replyText, setReplyText] = useState('');
@@ -291,7 +294,7 @@ export default function IssuePage() {
         const val = e.target.value;
         setReplyText(val);
         setTranslatedReply('');
-        if (!val.trim() || val.length < 8) { setLivePreview(''); return; }
+        if (!val.trim() || val.length < 5) { setLivePreview(''); return; }
         if (livePreviewDebounce.current) clearTimeout(livePreviewDebounce.current);
         livePreviewDebounce.current = setTimeout(async () => {
             setIsLivePreviewing(true);
@@ -299,14 +302,14 @@ export default function IssuePage() {
                 const res = await fetch('/api/translate-text', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ text: val, targetLanguage: 'English' }),
+                    body: JSON.stringify({ text: val, targetLanguage: targetLanguage }), // Translate to user's selected lang for verification
                 });
                 const data = await res.json();
                 setLivePreview(data.translatedText || '');
                 setSessionStats(prev => ({ ...prev, tokensSaved: prev.tokensSaved + Math.floor(val.length * 0.4) }));
             } catch { }
             finally { setIsLivePreviewing(false); }
-        }, 900);
+        }, 800);
     };
 
     const handleCopy = () => {
@@ -315,6 +318,24 @@ export default function IssuePage() {
         setIsCopied(true);
         toast.success('Copied to clipboard');
         setTimeout(() => setIsCopied(false), 2000);
+    };
+
+    const handlePostToGitHub = () => {
+        const textToUse = translatedReply || livePreview;
+        if (!textToUse) {
+            toast.error('Translate your reply to English first!');
+            return;
+        }
+        
+        // Copy english text to clipboard
+        navigator.clipboard.writeText(textToUse);
+        toast.success('English reply copied! Opening GitHub...');
+        
+        // Open original GitHub issue in a new tab
+        if (slug && slug.length >= 3) {
+            const url = `https://github.com/${slug[0]}/${slug[1]}/issues/${slug[2]}#issue-comment-box`;
+            window.open(url, '_blank');
+        }
     };
 
     // Decide which data to render (translated takes precedence)
@@ -339,49 +360,59 @@ export default function IssuePage() {
             </div>
 
             <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-                {/* Translator Toolbar */}
+                {/* Floating Translator Toolbar */}
                 {issueData && !isFetchingIssue && (
-                    <div className="mb-6 flex flex-col sm:flex-row items-center justify-between gap-4 rounded-xl border border-[#30363d] bg-[#161b22] p-4 animate-in fade-in slide-in-from-top-4">
-                        <div className="flex items-center gap-2 text-blue-400">
-                            <Languages className="h-5 w-5" />
-                            <span className="text-sm font-medium">Translate entire thread to:</span>
-                        </div>
-                        <div className="flex items-center gap-3 w-full sm:w-auto">
-                            <button
-                                onClick={handleGenerateRoadmap}
-                                disabled={isGeneratingRoadmap || !displayData}
-                                className="inline-flex items-center justify-center gap-2 rounded-lg border border-purple-500/30 bg-purple-500/10 text-purple-400 px-4 py-2.5 text-sm font-medium hover:bg-purple-500/20 disabled:opacity-50 transition-all shadow-sm"
-                                title="Analyze issue to find exactly what to fix"
-                            >
-                                {isGeneratingRoadmap ? <Loader2 className="h-4 w-4 animate-spin" /> : <Languages className="h-4 w-4" />}
-                                Roadmap
-                            </button>
-                            <button
-                                onClick={handleSummarize}
-                                disabled={isSummarizing || !issueData}
-                                className="inline-flex items-center justify-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-400 px-4 py-2.5 text-sm font-medium hover:bg-amber-500/20 disabled:opacity-50 transition-all shadow-sm"
-                                title="AI-powered thread summary"
-                            >
-                                {isSummarizing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                                AI Summary
-                            </button>
-                            <LanguageSelector
-                                selectedLanguage={targetLanguage}
-                                onLanguageChange={(code) => {
-                                    if (code) setTargetLanguage(code);
-                                }}
-                            />
-                            <button
-                                onClick={handleTranslateThread}
-                                disabled={isTranslatingThread}
-                                className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#238636] text-white px-4 py-2.5 text-sm font-medium shadow hover:bg-[#2ea043] focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:ring-offset-2 focus:ring-offset-[#0d1117] disabled:pointer-events-none disabled:opacity-50 transition-all duration-200"
-                            >
-                                {isTranslatingThread ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                    "Translate All"
-                                )}
-                            </button>
+                    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] w-[calc(100%-2rem)] max-w-5xl animate-in fade-in slide-in-from-bottom-8 duration-500">
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 rounded-2xl border border-white/10 bg-[#161b22]/80 backdrop-blur-xl p-4 shadow-[0_20px_50px_rgba(0,0,0,0.5)] ring-1 ring-white/5">
+                            <div className="flex items-center gap-3 text-blue-400 pl-2">
+                                <div className="p-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                                    <Languages className="h-5 w-5" />
+                                </div>
+                                <span className="text-sm font-semibold tracking-tight text-white/90 hidden md:block">Issue Translator</span>
+                            </div>
+                            <div className="flex items-center gap-2 w-full sm:w-auto">
+                                <button
+                                    onClick={handleGenerateRoadmap}
+                                    disabled={isGeneratingRoadmap || !displayData}
+                                    className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 rounded-xl border border-purple-500/30 bg-purple-500/10 text-purple-400 px-4 py-2 text-sm font-medium hover:bg-purple-500/20 disabled:opacity-50 transition-all shadow-sm"
+                                    title="Analyze issue to find exactly what to fix"
+                                >
+                                    {isGeneratingRoadmap ? <Loader2 className="h-4 w-4 animate-spin" /> : <TrendingUp className="h-4 w-4" />}
+                                    <span className="sm:inline">Roadmap</span>
+                                </button>
+                                <button
+                                    onClick={handleSummarize}
+                                    disabled={isSummarizing || !issueData}
+                                    className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-400 px-4 py-2 text-sm font-medium hover:bg-amber-500/20 disabled:opacity-50 transition-all shadow-sm"
+                                    title="AI-powered thread summary"
+                                >
+                                    {isSummarizing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                                    <span className="sm:inline">Summary</span>
+                                </button>
+                                <div className="h-8 w-px bg-white/10 mx-1 hidden sm:block"></div>
+                                <div className="flex-shrink-0">
+                                    <LanguageSelector
+                                        selectedLanguage={targetLanguage}
+                                        onLanguageChange={(code) => {
+                                            if (code) setTargetLanguage(code);
+                                        }}
+                                    />
+                                </div>
+                                <button
+                                    onClick={handleTranslateThread}
+                                    disabled={isTranslatingThread}
+                                    className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 rounded-xl bg-[#238636] text-white px-5 py-2 text-sm font-bold shadow-lg shadow-green-900/20 hover:bg-[#2ea043] hover:scale-[1.02] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-green-500/50 disabled:pointer-events-none disabled:opacity-50 transition-all duration-200"
+                                >
+                                    {isTranslatingThread ? (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                        <>
+                                            <Globe className="h-4 w-4" />
+                                            <span>Translate Thread</span>
+                                        </>
+                                    )}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 )}
@@ -395,7 +426,21 @@ export default function IssuePage() {
                             <span className="ml-auto text-[10px] text-amber-400/50 font-mono">Powered by Gemini</span>
                         </div>
                         <div className="prose prose-sm prose-invert max-w-none text-gray-200">
-                            <ReactMarkdown>{aiSummary}</ReactMarkdown>
+                            <ReactMarkdown 
+                                remarkPlugins={[remarkGfm, remarkBreaks]}
+                                components={{
+                                    a: ({ node, ...props }) => (
+                                        <a 
+                                            {...props} 
+                                            target="_blank" 
+                                            rel="noopener noreferrer" 
+                                            className="text-amber-400 hover:underline font-medium"
+                                        />
+                                    )
+                                }}
+                            >
+                                {aiSummary}
+                            </ReactMarkdown>
                         </div>
                     </div>
                 )}
@@ -411,7 +456,21 @@ export default function IssuePage() {
                             <h3 className="text-sm font-bold uppercase tracking-wider">Contributor's Roadmap</h3>
                         </div>
                         <div className="prose prose-sm prose-invert max-w-none text-gray-200 prose-ul:list-disc prose-li:my-1">
-                            <ReactMarkdown>{contributionRoadmap}</ReactMarkdown>
+                            <ReactMarkdown 
+                                remarkPlugins={[remarkGfm, remarkBreaks]}
+                                components={{
+                                    a: ({ node, ...props }) => (
+                                        <a 
+                                            {...props} 
+                                            target="_blank" 
+                                            rel="noopener noreferrer" 
+                                            className="text-purple-400 hover:underline font-medium"
+                                        />
+                                    )
+                                }}
+                            >
+                                {contributionRoadmap}
+                            </ReactMarkdown>
                         </div>
                         <div className="mt-6 flex items-center gap-2 text-[10px] text-purple-400/60 font-medium uppercase tracking-widest">
                             <AlertCircle className="h-3 w-3" />
@@ -539,63 +598,52 @@ export default function IssuePage() {
                                                 )}
                                             </div>
 
-                                            {/* 🔥 Live English Preview Panel */}
+                                            {/* 🔥 Verification Preview Panel (User's Selected Language) */}
                                             {livePreview && !translatedReply && (
                                                 <div className="mb-4 rounded-xl border border-blue-500/20 bg-blue-500/5 overflow-hidden animate-in fade-in duration-300">
                                                     <div className="flex items-center gap-2 border-b border-blue-500/20 bg-blue-500/10 px-4 py-2">
-                                                        <Eye className="h-3.5 w-3.5 text-blue-400" />
-                                                        <span className="text-xs font-semibold tracking-widest text-blue-400 uppercase">Live English Preview</span>
-                                                        <span className="ml-auto text-[10px] text-blue-400/50">Updates as you type</span>
+                                                        <span className="flex items-center justify-center w-5 h-5 rounded-full bg-blue-500/20 text-[10px] font-bold text-blue-400">1</span>
+                                                        <span className="text-xs font-semibold tracking-widest text-blue-400 uppercase">Verification Preview ({targetLanguage})</span>
                                                     </div>
                                                     <div className="p-4">
-                                                        <p className="text-sm font-mono text-gray-300 whitespace-pre-wrap">{livePreview}</p>
+                                                        <p className="text-sm font-medium text-gray-200 whitespace-pre-wrap">{livePreview}</p>
+                                                        <p className="mt-2 text-[10px] text-[#8b949e]">Does this reflect your intent? If so, finalize it for GitHub.</p>
                                                     </div>
                                                 </div>
                                             )}
 
-                                            <div className="flex justify-end border-t border-[#30363d] pt-6">
+                                            <div className="flex gap-2 border-t border-[#30363d] pt-6">
+                                                <button
+                                                    onClick={handlePostToGitHub}
+                                                    disabled={!translatedReply && !livePreview}
+                                                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-[#21262d] text-[#c9d1d9] rounded-lg hover:bg-[#30363d] transition-all border border-[#30363d] disabled:opacity-50 text-sm font-medium"
+                                                >
+                                                    <Github className="h-4 w-4" />
+                                                    Post to GitHub
+                                                </button>
                                                 <button
                                                     onClick={handleTranslateReply}
                                                     disabled={isTranslatingReply || !replyText.trim()}
-                                                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#238636] text-white px-6 py-2.5 text-sm font-medium shadow-lg hover:bg-[#2ea043] focus:outline-none focus:ring-2 focus:ring-[#2ea043]/50 focus:ring-offset-2 focus:ring-offset-[#0d1117] disabled:pointer-events-none disabled:opacity-50 transition-all duration-200"
+                                                    className="flex-[2] flex items-center justify-center gap-2 px-4 py-2 bg-[#238636] text-white rounded-lg hover:bg-[#2ea043] transition-all font-semibold disabled:opacity-50 text-sm"
                                                 >
                                                     {isTranslatingReply ? (
-                                                        <>
-                                                            <Loader2 className="h-4 w-4 animate-spin" />
-                                                            Translating...
-                                                        </>
+                                                        <Loader2 className="h-4 w-4 animate-spin" />
                                                     ) : (
-                                                        <>
-                                                            <Send className="h-4 w-4" />
-                                                            Translate to English
-                                                        </>
+                                                        <Globe className="h-4 w-4" />
                                                     )}
+                                                    Finalize Translation
                                                 </button>
                                             </div>
 
-                                            {/* Translated Output */}
+                                            {/* Finalized English Output */}
                                             {translatedReply && (
-                                                <div className="mt-6 rounded-xl border border-[#30363d] bg-[#0d1117] overflow-hidden animate-in fade-in slide-in-from-bottom-2">
-                                                    <div className="flex items-center justify-between border-b border-[#30363d] bg-[#161b22] px-4 py-2">
-                                                        <span className="text-xs font-medium tracking-wide text-[#8b949e] uppercase">English Translation</span>
-                                                        <button
-                                                            onClick={handleCopy}
-                                                            className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-[#8b949e] hover:bg-[#30363d] hover:text-white transition-colors"
-                                                        >
-                                                            {isCopied ? (
-                                                                <>
-                                                                    <Check className="h-3.5 w-3.5 text-[#3fb950]" />
-                                                                    <span className="text-[#3fb950]">Copied</span>
-                                                                </>
-                                                            ) : (
-                                                                <>
-                                                                    <Copy className="h-3.5 w-3.5" />
-                                                                    Copy to Clipboard
-                                                                </>
-                                                            )}
-                                                        </button>
+                                                <div className="mt-6 rounded-xl border border-green-500/20 bg-green-500/5 overflow-hidden animate-in fade-in slide-in-from-bottom-2">
+                                                    <div className="flex items-center gap-2 border-b border-green-500/20 bg-green-500/10 px-4 py-2">
+                                                        <span className="flex items-center justify-center w-5 h-5 rounded-full bg-green-500/20 text-[10px] font-bold text-green-400">2</span>
+                                                        <span className="text-xs font-semibold tracking-widest text-green-400 uppercase">Final English Post</span>
+                                                        <span className="ml-auto text-[10px] text-green-400/60 font-medium">Ready for GitHub</span>
                                                     </div>
-                                                    <div className="p-4">
+                                                    <div className="p-4 bg-[#0d1117]">
                                                         <p className="text-sm font-mono text-gray-300 whitespace-pre-wrap">{translatedReply}</p>
                                                     </div>
                                                 </div>
@@ -606,101 +654,103 @@ export default function IssuePage() {
                             </div>
 
                             {/* Sidebar (Right) */}
-                            <div className="w-full lg:w-72 shrink-0 space-y-6 text-sm">
+                            {displayData && (
+                                <div className="w-full lg:w-72 shrink-0 space-y-6 text-sm">
 
-                                {/* 🔥 IssueLingo Stats Card */}
-                                <div className="rounded-xl border border-[#30363d] bg-[#0d1117] p-4 space-y-3">
-                                    <div className="flex items-center gap-2 text-[#8b949e] border-b border-[#30363d] pb-2 mb-3">
-                                        <BarChart2 className="h-4 w-4" />
-                                        <h3 className="font-semibold text-white text-xs uppercase tracking-widest">Session Stats</h3>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <div className="flex flex-col gap-1 rounded-lg bg-[#161b22] border border-[#30363d] p-3">
-                                            <span className="text-[10px] uppercase tracking-widest text-[#8b949e]">Comments</span>
-                                            <span className="text-2xl font-bold text-white">{displayData.commentsCount}</span>
-                                            <span className="text-[10px] text-[#8b949e]">in thread</span>
+                                    {/* 🔥 IssueLingo Stats Card */}
+                                    <div className="rounded-xl border border-[#30363d] bg-[#0d1117] p-4 space-y-3">
+                                        <div className="flex items-center gap-2 text-[#8b949e] border-b border-[#30363d] pb-2 mb-3">
+                                            <BarChart2 className="h-4 w-4" />
+                                            <h3 className="font-semibold text-white text-xs uppercase tracking-widest">Session Stats</h3>
                                         </div>
-                                        <div className="flex flex-col gap-1 rounded-lg bg-[#161b22] border border-[#30363d] p-3">
-                                            <span className="text-[10px] uppercase tracking-widest text-[#8b949e]">Words</span>
-                                            <span className="text-2xl font-bold text-white">
-                                                {Math.round((displayData.body.length + displayData.comments.reduce((a, c) => a + c.body.length, 0)) / 5)}
-                                            </span>
-                                            <span className="text-[10px] text-[#8b949e]">in issue</span>
-                                        </div>
-                                        <div className="flex flex-col gap-1 rounded-lg bg-purple-500/5 border border-purple-500/20 p-3">
-                                            <span className="text-[10px] uppercase tracking-widest text-purple-400">Tokens Saved</span>
-                                            <span className="text-2xl font-bold text-purple-300">{sessionStats.tokensSaved}</span>
-                                            <span className="text-[10px] text-purple-400/60">this session</span>
-                                        </div>
-                                        <div className="flex flex-col gap-1 rounded-lg bg-blue-500/5 border border-blue-500/20 p-3">
-                                            <span className="text-[10px] uppercase tracking-widest text-blue-400">Language</span>
-                                            <span className="text-xl font-bold text-blue-300">{targetLanguage.slice(0, 6)}</span>
-                                            <span className="text-[10px] text-blue-400/60">target</span>
-                                        </div>
-                                    </div>
-                                    <div className="mt-1 text-[10px] text-center text-[#8b949e]/50 pt-2 border-t border-[#30363d]">
-                                        🌍 IssueLingo · Breaking language barriers
-                                    </div>
-                                </div>
-
-                                <div className="border-b border-[#30363d] pb-4">
-                                    <h3 className="font-semibold text-white mb-2">Assignees</h3>
-                                    {displayData.assignees.length > 0 ? (
-                                        <div className="flex flex-col gap-2">
-                                            {displayData.assignees.map(a => (
-                                                <div key={a.login} className="flex items-center gap-2 text-[#8b949e] hover:text-blue-400 cursor-pointer">
-                                                    <img src={a.avatarUrl} alt={a.login} className="w-5 h-5 rounded-full" />
-                                                    <span>{a.login}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <span className="text-[#8b949e]">No one assigned</span>
-                                    )}
-                                </div>
-
-                                <div className="border-b border-[#30363d] pb-4">
-                                    <h3 className="font-semibold text-white mb-2">Labels</h3>
-                                    {displayData.labels.length > 0 ? (
-                                        <div className="flex flex-wrap gap-1.5">
-                                            {displayData.labels.map(l => (
-                                                <span
-                                                    key={l.name}
-                                                    className="px-2 py-0.5 rounded-full text-xs font-medium border"
-                                                    style={{
-                                                        backgroundColor: `#${l.color}20`,
-                                                        color: `#${l.color}`,
-                                                        borderColor: `#${l.color}40`
-                                                    }}
-                                                >
-                                                    {l.name}
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div className="flex flex-col gap-1 rounded-lg bg-[#161b22] border border-[#30363d] p-3">
+                                                <span className="text-[10px] uppercase tracking-widest text-[#8b949e]">Comments</span>
+                                                <span className="text-2xl font-bold text-white">{displayData.commentsCount}</span>
+                                                <span className="text-[10px] text-[#8b949e]">in thread</span>
+                                            </div>
+                                            <div className="flex flex-col gap-1 rounded-lg bg-[#161b22] border border-[#30363d] p-3">
+                                                <span className="text-[10px] uppercase tracking-widest text-[#8b949e]">Words</span>
+                                                <span className="text-2xl font-bold text-white">
+                                                    {Math.round((displayData.body.length + displayData.comments.reduce((a, c) => a + c.body.length, 0)) / 5)}
                                                 </span>
-                                            ))}
+                                                <span className="text-[10px] text-[#8b949e]">in issue</span>
+                                            </div>
+                                            <div className="flex flex-col gap-1 rounded-lg bg-purple-500/5 border border-purple-500/20 p-3">
+                                                <span className="text-[10px] uppercase tracking-widest text-purple-400">Tokens Saved</span>
+                                                <span className="text-2xl font-bold text-purple-300">{sessionStats.tokensSaved}</span>
+                                                <span className="text-[10px] text-purple-400/60">this session</span>
+                                            </div>
+                                            <div className="flex flex-col gap-1 rounded-lg bg-blue-500/5 border border-blue-500/20 p-3">
+                                                <span className="text-[10px] uppercase tracking-widest text-blue-400">Language</span>
+                                                <span className="text-xl font-bold text-blue-300">{targetLanguage.slice(0, 6)}</span>
+                                                <span className="text-[10px] text-blue-400/60">target</span>
+                                            </div>
                                         </div>
-                                    ) : (
+                                        <div className="mt-1 text-[10px] text-center text-[#8b949e]/50 pt-2 border-t border-[#30363d]">
+                                            🌍 IssueLingo · Breaking language barriers
+                                        </div>
+                                    </div>
+
+                                    <div className="border-b border-[#30363d] pb-4">
+                                        <h3 className="font-semibold text-white mb-2">Assignees</h3>
+                                        {displayData.assignees.length > 0 ? (
+                                            <div className="flex flex-col gap-2">
+                                                {displayData.assignees.map(a => (
+                                                    <div key={a.login} className="flex items-center gap-2 text-[#8b949e] hover:text-blue-400 cursor-pointer">
+                                                        <img src={a.avatarUrl} alt={a.login} className="w-5 h-5 rounded-full" />
+                                                        <span>{a.login}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <span className="text-[#8b949e]">No one assigned</span>
+                                        )}
+                                    </div>
+
+                                    <div className="border-b border-[#30363d] pb-4">
+                                        <h3 className="font-semibold text-white mb-2">Labels</h3>
+                                        {displayData.labels.length > 0 ? (
+                                            <div className="flex flex-wrap gap-1.5">
+                                                {displayData.labels.map(l => (
+                                                    <span
+                                                        key={l.name}
+                                                        className="px-2 py-0.5 rounded-full text-xs font-medium border"
+                                                        style={{
+                                                            backgroundColor: `#${l.color}20`,
+                                                            color: `#${l.color}`,
+                                                            borderColor: `#${l.color}40`
+                                                        }}
+                                                    >
+                                                        {l.name}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <span className="text-[#8b949e]">None yet</span>
+                                        )}
+                                    </div>
+
+                                    <div className="border-b border-[#30363d] pb-4">
+                                        <h3 className="font-semibold text-white mb-2">Projects</h3>
                                         <span className="text-[#8b949e]">None yet</span>
-                                    )}
-                                </div>
+                                    </div>
 
-                                <div className="border-b border-[#30363d] pb-4">
-                                    <h3 className="font-semibold text-white mb-2">Projects</h3>
-                                    <span className="text-[#8b949e]">None yet</span>
-                                </div>
-
-                                <div className="border-b border-[#30363d] pb-4">
-                                    <h3 className="font-semibold text-white mb-2">Milestone</h3>
-                                    {displayData.milestone ? (
-                                        <span className="text-[#8b949e] hover:text-blue-400 cursor-pointer flex items-center gap-1">
-                                            <span className="w-4 h-4 rounded-full border border-[#3fb950] flex items-center justify-center">
-                                                <span className="w-1.5 h-1.5 bg-[#3fb950] rounded-full"></span>
+                                    <div className="border-b border-[#30363d] pb-4">
+                                        <h3 className="font-semibold text-white mb-2">Milestone</h3>
+                                        {displayData.milestone ? (
+                                            <span className="text-[#8b949e] hover:text-blue-400 cursor-pointer flex items-center gap-1">
+                                                <span className="w-4 h-4 rounded-full border border-[#3fb950] flex items-center justify-center">
+                                                    <span className="w-1.5 h-1.5 bg-[#3fb950] rounded-full"></span>
+                                                </span>
+                                                {displayData.milestone}
                                             </span>
-                                            {displayData.milestone}
-                                        </span>
-                                    ) : (
-                                        <span className="text-[#8b949e]">No milestone</span>
-                                    )}
+                                        ) : (
+                                            <span className="text-[#8b949e]">No milestone</span>
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
+                            )}
                         </div>
                     </div>
                 )}

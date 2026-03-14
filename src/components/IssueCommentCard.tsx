@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Loader2, Languages, Clock, ArrowRightLeft, AlertCircle } from 'lucide-react';
+import { Loader2, Languages, Clock, ArrowRightLeft, AlertCircle, MoreVertical, Smile } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import remarkBreaks from 'remark-breaks';
 import rehypeRaw from 'rehype-raw';
 import { toast } from 'sonner';
 
@@ -145,7 +147,7 @@ export default function IssueCommentCard({ item, isMainBody = false, targetLangu
     const formattedDate = item.createdAt ? new Date(item.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'recently';
 
     return (
-        <div className={`relative rounded-xl border bg-[#0d1117] shadow-sm transition-all ${isMainBody ? 'border-[#30363d]' : 'border-[#30363d] ml-8 lg:ml-12'}`}>
+        <div className={`relative rounded-md border bg-[#0d1117] shadow-sm mb-4 transition-all ${isMainBody ? 'border-[#30363d]' : 'border-[#30363d] ml-8 lg:ml-12'}`}>
             {!isMainBody && (
                 <div className="absolute -left-12 sm:-left-16 top-0 h-10 w-10 overflow-hidden rounded-full ring-2 ring-[#0d1117] bg-[#0d1117]">
                     <img src={item.avatarUrl} alt={item.author} className="h-full w-full object-cover" />
@@ -158,77 +160,87 @@ export default function IssueCommentCard({ item, isMainBody = false, targetLangu
             )}
 
             {/* Author Header */}
-            <div className={`border-b border-[#30363d] bg-[#161b22] px-4 py-3 flex items-center justify-between ${!isMainBody && 'rounded-t-xl'}`}>
-                <div className="flex items-center gap-2 flex-wrap">
+            <div className={`border-b border-[#30363d] bg-[#161b22] px-4 py-2 flex items-center justify-between ${!isMainBody ? 'rounded-t-md' : ''}`}>
+                <div className="flex items-center gap-2 min-w-0">
                     {isMainBody && (
                         <img src={item.avatarUrl} alt={item.author} className="h-6 w-6 rounded-full" />
                     )}
-                    <div className="text-sm text-[#8b949e] flex flex-wrap items-center gap-1.5">
-                        <span className="font-semibold text-gray-200">{item.author}</span>
-                        <span>commented {formattedDate}</span>
+                    <div className="text-sm text-[#8b949e] flex items-center gap-1.5 min-w-0 overflow-hidden">
+                        <span className="font-semibold text-[#e6edf3] hover:underline cursor-pointer truncate">{item.author}</span>
+                        <span className="whitespace-nowrap flex-shrink-0">commented {formattedDate}</span>
 
                         {item.authorAssociation && item.authorAssociation !== 'NONE' && (
-                            <span className="ml-2 px-2 py-0.5 rounded-full border border-[#30363d] text-xs font-medium text-[#8b949e] capitalize hidden sm:inline-block">
+                            <span className="px-2 py-0.5 rounded-full border border-[#30363d] text-[10px] font-medium text-[#8b949e] capitalize hidden sm:inline-block">
                                 {item.authorAssociation.toLowerCase()}
-                            </span>
-                        )}
-
-                        {/* Word translation popover indicator */}
-                        {!isShowingTranslation && (
-                            <span className="ml-2 text-[10px] bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded-full border border-blue-500/20 hidden sm:inline-block delay-500 animate-in fade-in">
-                                Select text to translate
                             </span>
                         )}
                     </div>
                 </div>
 
-                {/* Individual Translate Button */}
-                <button
-                    onClick={handleTranslateToggle}
-                    disabled={isTranslating}
-                    className={`shrink-0 inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${isShowingTranslation
-                        ? 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 border border-blue-500/30'
-                        : 'bg-transparent text-[#8b949e] hover:bg-[#30363d] hover:text-white border border-transparent'
-                        }`}
-                >
-                    {isTranslating ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : isShowingTranslation ? (
-                        <>
-                            <ArrowRightLeft className="h-3.5 w-3.5" />
-                            Original
-                        </>
-                    ) : (
-                        <>
-                            <Languages className="h-3.5 w-3.5" />
-                            Translate
-                        </>
-                    )}
-                </button>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                    {/* Individual Translate Button */}
+                    <button
+                        onClick={handleTranslateToggle}
+                        disabled={isTranslating}
+                        className={`shrink-0 inline-flex items-center gap-1 px-2 py-1 text-xs font-medium transition-colors border rounded-md ${isShowingTranslation
+                            ? 'bg-blue-500/10 text-blue-400 border-blue-500/30'
+                            : 'bg-transparent text-[#8b949e] border-transparent hover:bg-[#30363d] hover:text-[#e6edf3]'
+                            }`}
+                    >
+                        {isTranslating ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : isShowingTranslation ? (
+                            <>
+                                <ArrowRightLeft className="h-3 w-3" />
+                                <span className="hidden sm:inline">Original</span>
+                            </>
+                        ) : (
+                            <>
+                                <Languages className="h-3 w-3" />
+                                <span className="hidden sm:inline">Translate</span>
+                            </>
+                        )}
+                    </button>
+
+                </div>
             </div>
 
             {/* Body */}
-            <div className="p-4 sm:p-6 relative group">
+            <div className="p-4 relative group">
                 {isShowingTranslation && (
-                    <div className="absolute top-0 left-0 w-1 h-full bg-blue-500/50 rounded-bl-md" />
+                    <div className="absolute top-0 left-0 w-1 h-full bg-blue-500/50" />
                 )}
                 <div
                     ref={proseRef}
-                    className="prose prose-sm prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-[#161b22] prose-pre:border prose-pre:border-[#30363d] prose-a:text-blue-400 hover:prose-a:underline selection:bg-blue-500/30 selection:text-white"
+                    className="prose-github selection:bg-blue-500/30 selection:text-white overflow-hidden"
                     onMouseUp={handleSelection}
                     onTouchEnd={handleSelection}
                 >
-                    <ReactMarkdown rehypePlugins={[rehypeRaw]}>{currentText}</ReactMarkdown>
+                    <ReactMarkdown 
+                        remarkPlugins={[remarkGfm, remarkBreaks]} 
+                        rehypePlugins={[rehypeRaw]}
+                        components={{
+                            a: ({ node, ...props }) => (
+                                <a 
+                                    {...props} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer" 
+                                    className="text-blue-400 hover:underline font-medium"
+                                />
+                            )
+                        }}
+                    >
+                        {currentText}
+                    </ReactMarkdown>
                 </div>
 
                 {/* Selection Translation Floating UI */}
-                {selectionTranslation && selectionTranslation.position && (
+                {selectionTranslation && (
                     <div
-                        className="translation-popover fixed z-50 bg-[#161b22] shadow-2xl shadow-black/50 border border-[#30363d] rounded-xl p-3 sm:p-4 max-w-sm w-[90vw] animate-in fade-in zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out data-[state=closed]:zoom-out-95"
+                        className="translation-popover fixed z-50 bg-[#161b22] shadow-2xl shadow-black/50 border border-[#30363d] rounded-xl p-3 sm:p-4 max-w-sm w-[90vw] animate-in fade-in zoom-in-95"
                         style={{
-                            // Simplified positioning: center above the selection
-                            top: `${Math.max(10, selectionTranslation.position.y - 100)}px`,
-                            left: `${Math.max(10, Math.min(window.innerWidth - 300, selectionTranslation.position.x - 150))}px`,
+                            top: `${Math.max(10, (selectionTranslation.position?.y || 0) - 100)}px`,
+                            left: `${Math.max(10, Math.min(window.innerWidth - 300, (selectionTranslation.position?.x || 0) - 150))}px`,
                         }}
                     >
                         <div className="flex flex-col gap-2">
@@ -237,7 +249,6 @@ export default function IssueCommentCard({ item, isMainBody = false, targetLangu
                                 <button
                                     onClick={() => setSelectionTranslation(null)}
                                     className="h-5 w-5 rounded-md hover:bg-[#30363d] flex items-center justify-center text-[#8b949e] hover:text-white transition-colors"
-                                    title="Close"
                                 >
                                     ✕
                                 </button>
@@ -246,11 +257,11 @@ export default function IssueCommentCard({ item, isMainBody = false, targetLangu
                             {selectionTranslation.isLoading ? (
                                 <div className="flex items-center gap-2 text-blue-400 py-2">
                                     <Loader2 className="h-4 w-4 animate-spin" />
-                                    <span className="text-sm">Translating text...</span>
+                                    <span className="text-sm">Translating...</span>
                                 </div>
                             ) : (
                                 <div className="space-y-1">
-                                    <span className="text-sm font-medium text-white block break-words max-h-[150px] overflow-y-auto pr-2 custom-scrollbar">
+                                    <span className="text-sm font-medium text-[#e6edf3] block break-words max-h-[150px] overflow-y-auto pr-2 custom-scrollbar">
                                         {selectionTranslation.translated}
                                     </span>
                                 </div>

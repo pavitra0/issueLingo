@@ -10,6 +10,28 @@
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-border: var(--border);
+  --animate-blob-1: blob-1 25s infinite ease-in-out;
+  --animate-blob-2: blob-2 30s infinite ease-in-out;
+  --animate-blob-3: blob-3 28s infinite ease-in-out;
+}
+
+@keyframes blob-1 {
+  0%, 100% { transform: translate(0vw, 0vh) scale(1); }
+  25% { transform: translate(40vw, 15vh) scale(1.2); }
+  50% { transform: translate(25vw, 40vh) scale(0.8); }
+  75% { transform: translate(-10vw, 20vh) scale(1.1); }
+}
+
+@keyframes blob-2 {
+  0%, 100% { transform: translate(0vw, 0vh) scale(1.1); }
+  33% { transform: translate(-30vw, 30vh) scale(0.9); }
+  66% { transform: translate(-50vw, -10vh) scale(1.2); }
+}
+
+@keyframes blob-3 {
+  0%, 100% { transform: translate(0vw, 0vh) scale(0.9); }
+  33% { transform: translate(30vw, -40vh) scale(1.2); }
+  66% { transform: translate(50vw, 20vh) scale(0.8); }
 }
 
 @layer base {
@@ -42,5 +64,108 @@
   body {
     background-color: var(--background);
     color: var(--foreground);
+    @apply antialiased;
   }
+}
+
+/* GitHub Markdown Refinements */
+.prose-github {
+  max-width: none;
+  color: #e6edf3;
+  font-size: 14px;
+  line-height: 1.5;
+  word-wrap: break-word;
+}
+
+.prose-github h1, .prose-github h2, .prose-github h3, .prose-github h4, .prose-github h5, .prose-github h6 {
+  margin-top: 24px;
+  margin-bottom: 16px;
+  font-weight: 600;
+  line-height: 1.25;
+  color: #e6edf3;
+}
+
+.prose-github h1, .prose-github h2 {
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid #30363d;
+}
+
+.prose-github h1 { font-size: 2em; }
+.prose-github h2 { font-size: 1.5em; }
+.prose-github h3 { font-size: 1.25em; }
+.prose-github h4 { font-size: 1em; }
+
+.prose-github p {
+  margin-top: 0;
+  margin-bottom: 16px;
+}
+
+.prose-github blockquote {
+  padding: 0 1em;
+  color: #8b949e;
+  border-left: 0.25em solid #30363d;
+  margin: 0 0 16px 0;
+}
+
+.prose-github ul, .prose-github ol {
+  padding-left: 2em;
+  margin-top: 0;
+  margin-bottom: 16px;
+}
+
+.prose-github li {
+  margin-top: 0.25em;
+}
+
+.prose-github table {
+  display: block;
+  width: max-content !important;
+  max-width: 100% !important;
+  overflow: auto;
+  border-spacing: 0;
+  border-collapse: collapse;
+  margin-top: 0;
+  margin-bottom: 16px;
+}
+
+.prose-github table th, .prose-github table td {
+  padding: 6px 13px;
+  border: 1px solid #30363d;
+}
+
+.prose-github table tr {
+  background-color: #0d1117;
+  border-top: 1px solid #30363d;
+}
+
+.prose-github table tr:nth-child(2n) {
+  background-color: #161b22;
+}
+
+.prose-github code:not(pre code) {
+  padding: 0.2em 0.4em;
+  margin: 0;
+  font-size: 85%;
+  background-color: rgba(110, 118, 129, 0.4);
+  border-radius: 6px;
+  font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
+}
+
+.prose-github pre {
+  padding: 16px;
+  overflow: auto;
+  font-size: 85%;
+  line-height: 1.45;
+  background-color: #161b22;
+  border-radius: 6px;
+  border: 1px solid #30363d;
+  margin-bottom: 16px;
+}
+
+.prose-github hr {
+  height: 0.25em;
+  padding: 0;
+  margin: 24px 0;
+  background-color: #30363d;
+  border: 0;
 }

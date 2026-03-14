@@ -68,9 +68,10 @@ export default function Home() {
     <main className="relative flex min-h-screen flex-col items-center justify-center p-6 overflow-hidden bg-[#010409] selection:bg-blue-500/30">
 
       {/* Background glow effects */}
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-blue-600/10 blur-[120px] rounded-full" />
-        <div className="absolute bottom-0 right-1/4 w-[400px] h-[200px] bg-purple-600/8 blur-[100px] rounded-full" />
+      <div className="pointer-events-none absolute inset-0 overflow-hidden opacity-60">
+        <div className="absolute top-[-10%] left-[-10%] w-[40rem] h-[40rem] bg-blue-600/30 blur-[120px] rounded-full mix-blend-screen animate-blob-1" />
+        <div className="absolute top-[20%] right-[-10%] w-[35rem] h-[35rem] bg-purple-600/30 blur-[120px] rounded-full mix-blend-screen animate-blob-2" />
+        <div className="absolute bottom-[-20%] left-[20%] w-[45rem] h-[45rem] bg-pink-600/20 blur-[120px] rounded-full mix-blend-screen animate-blob-3" />
         <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width=%2220%22 height=%2220%22 viewBox=%220 0 20 20%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Ccircle cx=%221%22 cy=%221%22 r=%220.8%22 fill=%22%23ffffff%22 fill-opacity=%220.04%22/%3E%3C/svg%3E')]" />
       </div>
 
@@ -80,10 +81,10 @@ export default function Home() {
         <div className="flex flex-col items-center gap-5 text-center">
           {/* Logo mark */}
           <div className="relative">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 shadow-2xl shadow-blue-500/30">
-              <Globe className="h-8 w-8 text-white" />
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl shadow-2xl bg-white/10 ">
+              <Github className="h-8 w-8 text-purple-400" />
             </div>
-            <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-green-500 border-2 border-[#010409] animate-pulse" />
+            <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-purple-500 border-2 border-[#010409] animate-pulse" />
           </div>
 
           {/* Eyebrow badge */}
@@ -144,9 +145,14 @@ export default function Home() {
         </div>
 
         {/* Footer */}
-        <p className="text-center text-xs text-[#8b949e]/60">
-          No login required · No data stored · Open Source
-        </p>
+        <div className="flex flex-col items-center gap-2 mt-8">
+          <p className="text-center text-xs text-[#8b949e]/60 font-bold">
+            No login required · No data stored · Open Source
+          </p>
+          <p className="text-center text-[11px] text-[#8b949e]/40 max-w-sm">
+            Crafted with passion to demonstrate how AI can break language barriers, making open source accessible to everyone worldwide.
+          </p>
+        </div>
       </div>
     </main>
   );

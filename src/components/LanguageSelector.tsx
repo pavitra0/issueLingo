@@ -105,7 +105,7 @@ export default function LanguageSelector({
 
             {/* Dropdown */}
             {isOpen && (
-                <div className="absolute right-0 mt-2 w-[480px] h-[380px] bg-[#0d1117] border border-[#30363d] rounded-xl shadow-2xl z-50 flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150 origin-top-right">
+                <div className="absolute right-0 bottom-full mb-2 w-[480px] h-[380px] bg-[#0d1117] border border-[#30363d] rounded-xl shadow-2xl z-50 flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150 origin-bottom-right">
 
                     {/* Search */}
                     <div className="p-3 border-b border-[#30363d] bg-[#161b22] flex-none">
