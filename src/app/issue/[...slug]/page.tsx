@@ -184,6 +184,8 @@ export default function IssuePage() {
             const data = await res.json();
             if (data.error) throw new Error(data.error);
             setAiSummary(data.summary);
+            const chars = issueData.body.length + issueData.comments.reduce((a, c) => a + c.body.length, 0);
+            setSessionStats(prev => ({ ...prev, tokensSaved: prev.tokensSaved + Math.floor(chars / 4) }));
             toast.success('AI Summary ready!');
         } catch (e: any) {
             toast.error(e.message || 'Failed to summarize.');
@@ -209,6 +211,8 @@ export default function IssuePage() {
             const data = await res.json();
             if (data.error) throw new Error(data.error);
             setContributionRoadmap(data.roadmap);
+            const chars = displayData.body.length + displayData.comments.reduce((a, c) => a + c.body.length, 0);
+            setSessionStats(prev => ({ ...prev, tokensSaved: prev.tokensSaved + Math.floor(chars / 4) }));
             toast.success('Contribution Roadmap generated!');
         } catch (e) {
             toast.error('Failed to generate roadmap.');
@@ -233,7 +237,7 @@ export default function IssuePage() {
             const response = await fetch('/api/translate-issue', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ payloadObject, targetLanguage: getLanguageName(targetLanguage) }),
+                body: JSON.stringify({ payloadObject, targetLanguage }),
             });
 
             if (!response.ok) {
@@ -252,6 +256,13 @@ export default function IssuePage() {
                     body: localizedPayload.comments[index] || c.body
                 }))
             });
+
+            const chars = payloadObject.body.length + payloadObject.comments.reduce((a, c) => a + c.length, 0);
+            setSessionStats(prev => ({
+                ...prev,
+                translationsUsed: prev.translationsUsed + 1,
+                tokensSaved: prev.tokensSaved + Math.floor(chars / 4)
+            }));
 
             toast.success(`Thread translated to ${targetLanguage}!`);
         } catch (error) {
@@ -281,6 +292,7 @@ export default function IssuePage() {
 
             const data = await response.json();
             setTranslatedReply(data.translatedText);
+            setSessionStats(prev => ({ ...prev, tokensSaved: prev.tokensSaved + Math.floor(replyText.length / 4) }));
             toast.success('Reply translated to English!');
         } catch (error) {
             toast.error('Failed to translate reply. Please try again.');
@@ -326,11 +338,11 @@ export default function IssuePage() {
             toast.error('Translate your reply to English first!');
             return;
         }
-        
+
         // Copy english text to clipboard
         navigator.clipboard.writeText(textToUse);
         toast.success('English reply copied! Opening GitHub...');
-        
+
         // Open original GitHub issue in a new tab
         if (slug && slug.length >= 3) {
             const url = `https://github.com/${slug[0]}/${slug[1]}/issues/${slug[2]}#issue-comment-box`;
@@ -426,14 +438,14 @@ export default function IssuePage() {
                             <span className="ml-auto text-[10px] text-amber-400/50 font-mono">Powered by Gemini</span>
                         </div>
                         <div className="prose prose-sm prose-invert max-w-none text-gray-200">
-                            <ReactMarkdown 
+                            <ReactMarkdown
                                 remarkPlugins={[remarkGfm, remarkBreaks]}
                                 components={{
                                     a: ({ node, ...props }) => (
-                                        <a 
-                                            {...props} 
-                                            target="_blank" 
-                                            rel="noopener noreferrer" 
+                                        <a
+                                            {...props}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
                                             className="text-amber-400 hover:underline font-medium"
                                         />
                                     )
@@ -456,14 +468,14 @@ export default function IssuePage() {
                             <h3 className="text-sm font-bold uppercase tracking-wider">Contributor's Roadmap</h3>
                         </div>
                         <div className="prose prose-sm prose-invert max-w-none text-gray-200 prose-ul:list-disc prose-li:my-1">
-                            <ReactMarkdown 
+                            <ReactMarkdown
                                 remarkPlugins={[remarkGfm, remarkBreaks]}
                                 components={{
                                     a: ({ node, ...props }) => (
-                                        <a 
-                                            {...props} 
-                                            target="_blank" 
-                                            rel="noopener noreferrer" 
+                                        <a
+                                            {...props}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
                                             className="text-purple-400 hover:underline font-medium"
                                         />
                                     )
@@ -621,18 +633,7 @@ export default function IssuePage() {
                                                     <Github className="h-4 w-4" />
                                                     Post to GitHub
                                                 </button>
-                                                <button
-                                                    onClick={handleTranslateReply}
-                                                    disabled={isTranslatingReply || !replyText.trim()}
-                                                    className="flex-[2] flex items-center justify-center gap-2 px-4 py-2 bg-[#238636] text-white rounded-lg hover:bg-[#2ea043] transition-all font-semibold disabled:opacity-50 text-sm"
-                                                >
-                                                    {isTranslatingReply ? (
-                                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                                    ) : (
-                                                        <Globe className="h-4 w-4" />
-                                                    )}
-                                                    Finalize Translation
-                                                </button>
+
                                             </div>
 
                                             {/* Finalized English Output */}

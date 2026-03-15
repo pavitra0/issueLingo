@@ -51,8 +51,19 @@ Be specific, reference exact file paths and function names when they are mention
         // Real Gemini AI call
         const aiRoadmap = await callGeminiWithRotation(prompt);
 
+        const langCodeMap: Record<string, string> = {
+            'english': 'en',
+            'spanish': 'es',
+            'french': 'fr',
+            'japanese': 'ja',
+            'hindi': 'hi',
+            'german': 'de'
+        };
+        const requestedLang = (targetLanguage || '').toLowerCase().trim();
+        const targetLocale = langCodeMap[requestedLang] || requestedLang;
+
         // Translate if not English
-        if (targetLanguage && targetLanguage !== 'en') {
+        if (targetLocale && targetLocale !== 'en') {
             const lingo = new LingoDotDevEngine({ apiKey: process.env.LINGO_API_KEY! });
 
             // Protect code blocks before translation
@@ -72,7 +83,7 @@ Be specific, reference exact file paths and function names when they are mention
 
             let translated = await lingo.localizeText(protectedText, {
                 sourceLocale: 'en',
-                targetLocale: targetLanguage,
+                targetLocale: targetLocale,
             });
 
             // Restore code blocks

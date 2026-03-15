@@ -13,12 +13,9 @@ export async function POST(req: Request) {
   try {
     const { payloadObject, targetLanguage } = await req.json();
 
-    if (!payloadObject) {
-      return NextResponse.json({ error: 'payloadObject is required' }, { status: 400 });
-    }
-
-    const targetLocale = targetLanguage || 'es'; // Accept ISO codes directly (es, ja, hi...)
-
+    const requestedLang = targetLanguage || 'es';
+    const targetLocale = langCodeMap[requestedLang] || requestedLang;
+    
     // Initialize Lingo.dev SDK
     const lingo = new LingoDotDevEngine({
       apiKey: process.env.LINGO_API_KEY || ''

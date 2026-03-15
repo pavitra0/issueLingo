@@ -80,28 +80,43 @@ export default function IssueCommentCard({ item, isMainBody = false, targetLangu
         }
     };
 
-    const handleSelection = async () => {
+    const handleSelection = () => {
         const selection = window.getSelection();
         if (!selection || selection.isCollapsed) {
-            if (selectionTranslation && !selectionTranslation.isLoading) {
+            if (selectionTranslation && !selectionTranslation.isLoading && selectionTranslation.translated) {
+                // Keep it showing if we have a translation and it's not loading
+            } else {
                 setSelectionTranslation(null);
             }
             return;
         }
 
         const text = selection.toString().trim();
-        if (!text || text === selectionTranslation?.original) return;
+        if (!text) return;
+
+        // If it's the same text as current translation, don't reset unless it was hidden
+        if (text === selectionTranslation?.original && selectionTranslation) return;
 
         // Get bounding rect for positioning the popover near the selection
         const range = selection.getRangeAt(0);
         const rect = range.getBoundingClientRect();
 
+        // Position the popover above the selection
+        // We use rect.top (viewport-relative) because the popover is 'fixed'
         setSelectionTranslation({
             original: text,
             translated: '',
-            isLoading: true,
-            position: { x: rect.left + rect.width / 2, y: rect.top + window.scrollY }
+            isLoading: false, // Initially false because we show the "Translate" button first
+            position: { x: rect.left + rect.width / 2, y: rect.top }
         });
+    };
+
+    const performSelectionTranslation = async () => {
+        if (!selectionTranslation?.original) return;
+
+        const text = selectionTranslation.original;
+        
+        setSelectionTranslation(prev => prev ? { ...prev, isLoading: true } : null);
 
         try {
             const response = await fetch('/api/translate-text', {
@@ -113,7 +128,7 @@ export default function IssueCommentCard({ item, isMainBody = false, targetLangu
             if (!response.ok) throw new Error('Failed to translate selection');
 
             const data = await response.json();
-            // Ensure the selection hasn't changed while fetching
+            
             setSelectionTranslation(prev => {
                 if (prev?.original === text) {
                     return { ...prev, translated: data.translatedText, isLoading: false };
@@ -129,7 +144,7 @@ export default function IssueCommentCard({ item, isMainBody = false, targetLangu
     // Close translation popover if clicked outside
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
-            if (selectionTranslation && !selectionTranslation.isLoading) {
+            if (selectionTranslation) {
                 const target = e.target as HTMLElement;
                 if (!target.closest('.translation-popover')) {
                     setSelectionTranslation(null);
@@ -237,36 +252,50 @@ export default function IssueCommentCard({ item, isMainBody = false, targetLangu
                 {/* Selection Translation Floating UI */}
                 {selectionTranslation && (
                     <div
-                        className="translation-popover fixed z-50 bg-[#161b22] shadow-2xl shadow-black/50 border border-[#30363d] rounded-xl p-3 sm:p-4 max-w-sm w-[90vw] animate-in fade-in zoom-in-95"
+                        className="translation-popover fixed z-50 bg-[#161b22] shadow-[0_8px_32px_rgba(0,0,0,0.5)] border border-[#30363d] rounded-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200"
                         style={{
-                            top: `${Math.max(10, (selectionTranslation.position?.y || 0) - 100)}px`,
-                            left: `${Math.max(10, Math.min(window.innerWidth - 300, (selectionTranslation.position?.x || 0) - 150))}px`,
+                            top: `${Math.max(10, (selectionTranslation.position?.y || 0) - 10)}px`,
+                            left: `${selectionTranslation.position?.x || 0}px`,
+                            transform: 'translate(-50%, -100%)' // Center horizontally and move ABOVE the point
                         }}
                     >
-                        <div className="flex flex-col gap-2">
-                            <div className="flex justify-between items-start gap-4">
-                                <span className="text-[10px] font-semibold text-[#8b949e] tracking-wider uppercase">Translation</span>
-                                <button
-                                    onClick={() => setSelectionTranslation(null)}
-                                    className="h-5 w-5 rounded-md hover:bg-[#30363d] flex items-center justify-center text-[#8b949e] hover:text-white transition-colors"
-                                >
-                                    ✕
-                                </button>
+                        {selectionTranslation.isLoading ? (
+                            <div className="flex items-center gap-2 px-4 py-3 bg-[#161b22] text-blue-400">
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                <span className="text-xs font-semibold tracking-wide uppercase">Translating...</span>
                             </div>
-
-                            {selectionTranslation.isLoading ? (
-                                <div className="flex items-center gap-2 text-blue-400 py-2">
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                    <span className="text-sm">Translating...</span>
+                        ) : selectionTranslation.translated ? (
+                            <div className="flex flex-col min-w-[200px] max-w-sm">
+                                <div className="flex items-center justify-between gap-4 px-4 py-2 bg-[#0d1117] border-b border-[#30363d]">
+                                    <div className="flex items-center gap-2 text-blue-400">
+                                        <Languages className="h-3.5 w-3.5" />
+                                        <span className="text-[10px] font-bold tracking-widest uppercase">Translation</span>
+                                    </div>
+                                    <button 
+                                        onClick={() => setSelectionTranslation(null)}
+                                        className="text-[#8b949e] hover:text-white transition-colors"
+                                    >
+                                        ✕
+                                    </button>
                                 </div>
-                            ) : (
-                                <div className="space-y-1">
-                                    <span className="text-sm font-medium text-[#e6edf3] block break-words max-h-[150px] overflow-y-auto pr-2 custom-scrollbar">
+                                <div className="p-4 overflow-y-auto max-h-[200px] custom-scrollbar">
+                                    <span className="text-sm leading-relaxed text-[#e6edf3] whitespace-pre-wrap">
                                         {selectionTranslation.translated}
                                     </span>
                                 </div>
-                            )}
-                        </div>
+                            </div>
+                        ) : (
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    performSelectionTranslation();
+                                }}
+                                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white transition-all active:scale-95"
+                            >
+                                <Languages className="h-4 w-4" />
+                                <span className="text-sm font-bold">Translate</span>
+                            </button>
+                        )}
                     </div>
                 )}
             </div>

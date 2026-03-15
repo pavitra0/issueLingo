@@ -43,12 +43,23 @@ Keep each section to 1-2 sentences. Be technical and precise.
         // Call Gemini for real AI reasoning
         const aiSummary = await callGeminiWithRotation(prompt);
 
+        const langCodeMap: Record<string, string> = {
+            'english': 'en',
+            'spanish': 'es',
+            'french': 'fr',
+            'japanese': 'ja',
+            'hindi': 'hi',
+            'german': 'de'
+        };
+        const requestedLang = (targetLanguage || '').toLowerCase().trim();
+        const targetLocale = langCodeMap[requestedLang] || requestedLang;
+
         // If a target language is provided and it's not English, translate the result
-        if (targetLanguage && targetLanguage !== 'en') {
+        if (targetLocale && targetLocale !== 'en') {
             const lingo = new LingoDotDevEngine({ apiKey: process.env.LINGO_API_KEY! });
             const translated = await lingo.localizeText(aiSummary, {
                 sourceLocale: 'en',
-                targetLocale: targetLanguage,
+                targetLocale: targetLocale,
             });
             return NextResponse.json({ summary: translated });
         }

@@ -17,9 +17,9 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Text is required' }, { status: 400 });
         }
 
-        // Accept ISO codes directly (e.g. 'es', 'ja', 'hi')
-        // Fall back to 'es' if nothing is provided
-        const targetLocale = targetLanguage || 'es';
+        // Accept ISO codes or full names using the map
+        const requestedLang = targetLanguage || 'es';
+        const targetLocale = langCodeMap[requestedLang] || requestedLang;
 
         const lingo = new LingoDotDevEngine({
             apiKey: process.env.LINGO_API_KEY || ''
