@@ -45,8 +45,8 @@ We fix that. You paste a GitHub issue URL, we translate the whole thread, give y
 ## 📸 Screenshots & Demo
 
 ### 🎥 Watch the Demo
-[![Watch the Demo video!](https://img.youtube.com/vi/YOUR_VIDEO_ID/maxresdefault.jpg)](https://youtu.be/YOUR_VIDEO_ID)
-*(Replace `YOUR_VIDEO_ID` with your actual YouTube video ID)*
+[![Watch the Demo video!](https://img.youtube.com/vi/1kPQ3lUVilI/maxresdefault.jpg)](https://youtu.be/1kPQ3lUVilI)
+*
 
 ### 🛡️ The "Don't Touch My Code" Guarantee
 Unlike basic browser translation, IssueLingo translates the prose but protects your JSON, terminal commands, and markdown perfectly.
