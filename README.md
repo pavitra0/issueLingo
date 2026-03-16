@@ -14,6 +14,7 @@ IssueLingo is that tool you didn't know you needed untill you stared at a GitHub
 
 - [Why tho?](#-why-tho)
 - [Features](#-features-the-cool-stuff)
+- [Screenshots & Demo](#-screenshots--demo)
 - [How it Works](#-how-it-works)
 - [Architecture](#-architecture-fancy-word-for-how-things-connect)
 - [Getting Started](#-getting-started)
@@ -38,6 +39,24 @@ Open source is supposed to be for eveyone. But "everyone" speaks like 7,000+ lan
 ```
 
 We fix that. You paste a GitHub issue URL, we translate the whole thread, give you a roadmap, and even help you write a reply back in English. Its like having a polyglot friend who also happens to be really good at code.
+
+---
+
+## 📸 Screenshots & Demo
+
+### 🛡️ The "Don't Touch My Code" Guarantee
+Unlike basic browser translation, IssueLingo translates the prose but protects your JSON, terminal commands, and markdown perfectly.
+![Translation Accuracy](screenshots/UntitledDiff.png "Side-by-side comparison of protected code")
+
+### 🧠 Features in Action
+
+| Reverse Reply | Thread-Translate  |
+| :---: | :---: |
+| ![Roadmap Generation](screenshots/ezgif-7ee6792149e36a31.gif "Generating a step-by-step contributor roadmap") | ![AI Summary](screenshots/ezgif.com-animated-gif-maker.gif "Generating an instant AI Summary of the thread") |
+
+| AI Summary  |  Select-to-Translate  |
+| :---: | :---: |
+| ![Granular Translation](screenshots/ezgif-84e2f1f2621bc61f.gif "Highlighting text for instant granular translation") | ![Cross-lingual Reply](screenshots/ezgif-4518cdd306c585a8.gif "Drafting a reply in one language and posting in another") |
 
 ---
 
@@ -138,7 +157,7 @@ graph TD
 
 ```bash
 # Clone the repo (you know the drill)
-git clone https://github.com/your-username/issuelingo.git
+git clone https://github.com/pavitra0/issuelingo.git
 cd issuelingo
 
 # Install dependancies
