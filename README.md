@@ -10,6 +10,12 @@ IssueLingo is that tool you didn't know you needed untill you stared at a GitHub
 
 ---
 
+
+https://github.com/user-attachments/assets/0e974d02-3b16-4f6d-952e-8dfd2c750e84
+
+
+---
+
 ## 📖 Table of Contenst
 
 - [Why tho?](#-why-tho)
@@ -44,7 +50,7 @@ We fix that. You paste a GitHub issue URL, we translate the whole thread, give y
 
 ## 📸 Screenshots & Demo
 
-### 🎥 Watch the Demo
+### 🎥 Watch the Demo on youtube
 [![Watch the Demo video!](https://img.youtube.com/vi/1kPQ3lUVilI/maxresdefault.jpg)](https://youtu.be/1kPQ3lUVilI)
 *
 
